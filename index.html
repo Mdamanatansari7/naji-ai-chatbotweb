@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF--8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Najo AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.17.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
+    "react": "https://aistudiocdn.com/react@^19.1.1"
+  }
+}
+</script>
+<style>
+  :root {
+    --bg-body: linear-gradient(135deg, #111827 0%, #1c2c4c 50%, #2a0845 100%);
+    --bg-primary: rgba(255, 255, 255, 0.05);
+    --bg-secondary: rgba(255, 255, 255, 0.1);
+    --bg-tertiary: rgba(0,0,0,0.3);
+    --border-primary: rgba(255, 255, 255, 0.15);
+    --text-primary: #f0f0f0;
+    --text-secondary: #a0a0a0;
+    --accent-gradient: linear-gradient(90deg, #00C9FF, #92FE9D);
+    --scrollbar-thumb: var(--text-secondary);
+  }
+  
+  :root.theme-light {
+    --bg-body: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+    --bg-primary: rgba(255, 255, 255, 0.4);
+    --bg-secondary: rgba(255, 255, 255, 0.6);
+    --bg-tertiary: rgba(0,0,0,0.05);
+    --border-primary: rgba(0, 0, 0, 0.1);
+    --text-primary: #1f2937;
+    --text-secondary: #4b5563;
+    --scrollbar-thumb: var(--text-secondary);
+  }
+
+  body {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+    background: var(--bg-body);
+    color: var(--text-primary);
+    transition: background 0.3s ease, color 0.3s ease;
+  }
+  
+  .glass-card {
+    background: var(--bg-primary);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--border-primary);
+    transition: background 0.3s ease, border-color 0.3s ease;
+  }
+
+  .gradient-text {
+    background-image: var(--accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-fill-color: transparent;
+  }
+  
+  @keyframes slide-in-left {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slide-in-right {
+    from {
+      opacity: 0;
+      transform: translateX(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
+  .animate-slide-in-left {
+    animation: slide-in-left 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  }
+  
+  .animate-slide-in-right {
+    animation: slide-in-right 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  }
+
+  @keyframes gradient-bg {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  .animated-gradient-text {
+    background: linear-gradient(90deg, #00C9FF, #92FE9D, #00C9FF);
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: gradient-bg 4s ease infinite;
+  }
+
+  @keyframes pulse-loader {
+    0%, 100% {
+      transform: scale(0.8);
+      opacity: 0.7;
+    }
+    50% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  .loader-dot {
+    animation: pulse-loader 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  .loader-dot:nth-child(1) { background-color: #00C9FF; }
+  .loader-dot:nth-child(2) { animation-delay: 0.2s; background-color: #61e2be;}
+  .loader-dot:nth-child(3) { animation-delay: 0.4s; background-color: #92FE9D;}
+
+  /* For Markdown code blocks */
+  pre {
+    background-color: var(--bg-tertiary);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    border: 1px solid var(--border-primary);
+  }
+
+  code {
+    font-family: 'Courier New', Courier, monospace;
+  }
+  
+  /* Syntax highlighting theme overrides */
+  pre code.hljs {
+      background: transparent;
+      padding: 0;
+  }
+
+  /* --- Animated Bubbles Background --- */
+  .bubbles-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: -1;
+    transition: opacity 0.5s ease;
+  }
+  body.bubbles-disabled .bubbles-container {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .bubble {
+    position: absolute;
+    bottom: -150px;
+    width: 40px;
+    height: 40px;
+    background: rgba(0, 201, 255, 0.15);
+    border-radius: 50%;
+    opacity: 0;
+    animation: animateBubbles 25s linear infinite;
+    box-shadow: 0 0 5px rgba(0, 201, 255, 0.2), 0 0 10px rgba(0, 201, 255, 0.2);
+  }
+
+  @keyframes animateBubbles {
+    0% {
+      transform: translateY(0) scale(1);
+      opacity: 0;
+    }
+    10% { opacity: 0.7; }
+    90% { opacity: 0.7; }
+    100% {
+      transform: translateY(-120vh) scale(1.5);
+      opacity: 0;
+    }
+  }
+
+  .bubble:nth-child(1) { left: 10%; animation-duration: 20s; width: 20px; height: 20px; }
+  .bubble:nth-child(2) { left: 20%; animation-duration: 15s; animation-delay: 2s; width: 50px; height: 50px; }
+  .bubble:nth-child(3) { left: 35%; animation-duration: 30s; animation-delay: 4s; width: 35px; height: 35px; }
+  .bubble:nth-child(4) { left: 50%; animation-duration: 22s; animation-delay: 0s; width: 60px; height: 60px; }
+  .bubble:nth-child(5) { left: 65%; animation-duration: 28s; animation-delay: 6s; width: 25px; height: 25px; }
+  .bubble:nth-child(6) { left: 80%; animation-duration: 18s; animation-delay: 1s; width: 45px; height: 45px; }
+  .bubble:nth-child(7) { left: 90%; animation-duration: 26s; animation-delay: 3s; width: 30px; height: 30px; }
+  .bubble:nth-child(8) { left: 5%; animation-duration: 19s; animation-delay: 5s; width: 55px; height: 55px; }
+  .bubble:nth-child(9) { left: 75%; animation-duration: 24s; animation-delay: 7s; width: 40px; height: 40px; }
+  .bubble:nth-child(10) { left: 40%; animation-duration: 32s; animation-delay: 8s; width: 20px; height: 20px; }
+
+  /* --- Preloader --- */
+  .preloader {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(17, 24, 39, 0.8);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    opacity: 1;
+    transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
+  }
+
+  .preloader.hidden {
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  .preloader-content {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .preloader-icon {
+    width: 80px;
+    height: 80px;
+    animation: pulse-preloader 2s infinite ease-in-out;
+    z-index: 10;
+  }
+  
+  .preloader-glow {
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    background: conic-gradient(from 180deg at 50% 50%, #00C9FF, #92FE9D, #00C9FF);
+    border-radius: 50%;
+    filter: blur(50px);
+    animation: rotate-glow 5s linear infinite;
+    opacity: 0.6;
+  }
+
+  @keyframes pulse-preloader {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.1);
+    }
+  }
+
+  @keyframes rotate-glow {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  
+  @keyframes bounce-in {
+    0% {
+      opacity: 0;
+      transform: scale(0.5) translateY(20px);
+    }
+    80% {
+      transform: scale(1.1) translateY(-5px);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+  .animate-bounce-in {
+      animation: bounce-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+
+  /* Settings Modal */
+  .theme-option.active {
+    background-image: var(--accent-gradient);
+    color: #111827;
+  }
+  .toggle-switch {
+    background-color: var(--bg-secondary);
+  }
+  .toggle-switch[aria-checked="true"] {
+    background-image: var(--accent-gradient);
+  }
+  .toggle-knob {
+    transform: translateX(0.125rem);
+  }
+  .toggle-switch[aria-checked="true"] .toggle-knob {
+    transform: translateX(1.625rem);
+  }
+  
+  /* --- Glowing Effects --- */
+  .focus-glow:focus {
+    box-shadow: 0 0 15px 2px rgba(146, 254, 157, 0.4);
+    border: 1px solid rgba(146, 254, 157, 0.6) !important;
+  }
+
+  .button-glow:hover {
+    box-shadow: 0 0 10px 1px rgba(146, 254, 157, 0.3);
+  }
+
+
+</style>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="preloader" class="preloader">
+      <div class="preloader-content">
+        <div class="preloader-glow"></div>
+        <svg class="preloader-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Loading">
+          <defs>
+            <linearGradient id="najo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#00C9FF" />
+              <stop offset="100%" stopColor="#92FE9D" />
+            </linearGradient>
+          </defs>
+          <path d="M6 4V20L18 4V20" stroke="url(#najo-gradient)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+    </div>
+    <div class="bubbles-container" aria-hidden="true">
+      <div class="bubble"></div>
+      <div class="bubble"></div>
+      <div class="bubble"></div>
+      <div class="bubble"></div>
+      <div class="bubble"></div>
+      <div class="bubble"></div>
+      <div class="bubble"></div>
+      <div class="bubble"></div>
+      <div class="bubble"></div>
+      <div class="bubble"></div>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script>
+      window.addEventListener('load', () => {
+        const preloader = document.getElementById('preloader');
+        if (preloader) {
+          preloader.classList.add('hidden');
+          setTimeout(() => {
+            preloader.style.display = 'none';
+          }, 500);
+        }
+      });
+    </script>
+  </body>
+</html>
